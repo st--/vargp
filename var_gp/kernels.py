@@ -4,7 +4,7 @@ import torch.distributions as dist
 from torch.distributions.kl import kl_divergence
 
 
-class RBFKernel(nn.Module):
+class StationaryKernel(nn.Module):
     def __init__(self, in_size, prior_log_mean=None, prior_log_logvar=None, map_est=False):
         super().__init__()
 
@@ -53,7 +53,7 @@ class RBFKernel(nn.Module):
 
         dnorm2 = - 2. * xy + xx.diagonal(dim1=-2, dim2=-1).unsqueeze(-1) + yy.diagonal(dim1=-2, dim2=-1).unsqueeze(-2)
 
-        return gamma2 * (-.5 * dnorm2).exp()
+        return gamma2 * self._k_r(dnorm2)
 
     def compute_diag(self, kern_samples):
         gamma2 = (kern_samples[..., -1:] * 2.).exp().unsqueeze(-2)
@@ -75,6 +75,17 @@ class RBFKernel(nn.Module):
         prior_dist = dist.Normal(self.prior_log_mean, self.prior_log_logvar.exp().sqrt())
         total_kl = kl_divergence(var_dist, prior_dist).sum(dim=0)
         return total_kl
+
+
+class RBFKernel(StationaryKernel):
+    def _k_r(self, dnorm2):
+        return (-.5 * dnorm2).exp()
+
+
+class Matern52Kernel(StationaryKernel):
+    def _k_r(self, dnorm2):
+        sqrt5 = np.sqrt(5.0)
+        return (1.0 + sqrt5 * r + 5.0 / 3.0 * dnorm2) * (-sqrt5 * dnorm2.sqrt()).exp()
 
 
 class DeepRBFKernel(RBFKernel):
