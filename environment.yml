@@ -2,7 +2,7 @@ name: vargp
 channels:
   - conda-forge
 dependencies:
-  - python
+  - python<=3.9
   - pip
   - pip:
     - jupyterlab
@@ -13,6 +13,6 @@ dependencies:
     - fire
     - tensorboard
     - wandb
-    - torch
-    - torchvision
-    - torch_optimizer
+    - torch==1.8.1
+    - torchvision==0.9.1
+    - torch_optimizer==0.1.0
