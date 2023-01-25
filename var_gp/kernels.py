@@ -5,10 +5,11 @@ from torch.distributions.kl import kl_divergence
 
 
 class StationaryKernel(nn.Module):
-    def __init__(self, in_size, prior_log_mean=None, prior_log_logvar=None, map_est=False):
+    def __init__(self, in_size, prior_log_mean=None, prior_log_logvar=None, map_est=True, ard=False):
         super().__init__()
 
         self.map_est = map_est
+        self.ard = ard
 
         # Variational Parameters (log lengthscale and log scale factor)
         log_init = torch.tensor(.5).log() * torch.ones(in_size + 1) \
@@ -38,7 +39,10 @@ class StationaryKernel(nn.Module):
         n_hypers = kern_samples.size(0)
         kern_samples = kern_samples.view(n_hypers, 1, *([1] * len(x.shape[:-2])), -1)
 
-        sigma = kern_samples[..., :-1].exp()
+        if self.ard:
+            sigma = kern_samples[..., :-1].exp()
+        else:
+            sigma = kern_samples[..., :1].exp()
         gamma2 = (kern_samples[..., -1:] * 2.).exp()
 
         sx = x.unsqueeze(0) / sigma
@@ -77,12 +81,15 @@ class StationaryKernel(nn.Module):
         return total_kl
 
 
+"""
 class RBFKernel(StationaryKernel):
     def _k_r(self, dnorm2):
         return (-.5 * dnorm2).exp()
+"""
 
 
-class Matern52Kernel(StationaryKernel):
+# class Matern52Kernel(StationaryKernel):
+class RBFKernel(StationaryKernel):
     def _k_r(self, dnorm2):
         sqrt5 = np.sqrt(5.0)
         return (1.0 + sqrt5 * r + 5.0 / 3.0 * dnorm2) * (-sqrt5 * dnorm2.sqrt()).exp()
